@@ -2,3 +2,8 @@
 .vscode/
 include/secrets.h
 .DS_Store
+
+# マニュアル図版の生成物 (docs/images/ と docs/setup-guide.html が成果物)
+tools/docs-figures/out/
+tools/docs-figures/venv/
+tools/docs-figures/artifact.html
