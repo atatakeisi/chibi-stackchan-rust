@@ -1,0 +1,753 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>ちびスタックちゃん はじめの設定</title>
+</head>
+<body>
+<style>
+/* ============================================================
+   ちびスタックちゃん セットアップガイド
+   色は本体ファームウェアの実際の描画色から採っている:
+     SETUP MODE のバー rgb(220,110,0) / LCD の CYAN / LCD の黒
+   機械が出す文字・機械に入れる文字は すべて等幅、
+   人間がする動作は 日本語ゴシック —— という書き分けで統一する。
+   ============================================================ */
+:root {
+  --amber:      #dc6e00;
+  --amber-soft: #fbeddb;
+  --ink:        #1b1714;
+  --ink-2:      #5c534c;
+  --ink-3:      #8b817a;
+  --paper:      #f6f5f3;
+  --card:       #ffffff;
+  --rule:       #ded9d4;
+  --ok:         #1c7345;
+  --ok-bg:      #e4f2ea;
+  --stop:       #bc2a1e;
+  --stop-bg:    #fbe8e6;
+  --lcd:        #0a0a0c;
+
+  --jp: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic Medium",
+        YuGothic, "Noto Sans JP", Meiryo, system-ui, sans-serif;
+  --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas,
+          "Noto Sans Mono", monospace;
+
+  --measure: 34rem;
+  --r: 3px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --amber:      #f59a2e;
+    --amber-soft: #3a2a13;
+    --ink:        #f0ece8;
+    --ink-2:      #b3a9a1;
+    --ink-3:      #877d75;
+    --paper:      #14120f;
+    --card:       #1d1a17;
+    --rule:       #332e29;
+    --ok:         #5fc98d;
+    --ok-bg:      #16301f;
+    --stop:       #f6857a;
+    --stop-bg:    #351714;
+  }
+}
+:root[data-theme="dark"] {
+  --amber:      #f59a2e;
+  --amber-soft: #3a2a13;
+  --ink:        #f0ece8;
+  --ink-2:      #b3a9a1;
+  --ink-3:      #877d75;
+  --paper:      #14120f;
+  --card:       #1d1a17;
+  --rule:       #332e29;
+  --ok:         #5fc98d;
+  --ok-bg:      #16301f;
+  --stop:       #f6857a;
+  --stop-bg:    #351714;
+}
+:root[data-theme="light"] {
+  --amber:      #dc6e00;
+  --amber-soft: #fbeddb;
+  --ink:        #1b1714;
+  --ink-2:      #5c534c;
+  --ink-3:      #8b817a;
+  --paper:      #f6f5f3;
+  --card:       #ffffff;
+  --rule:       #ded9d4;
+  --ok:         #1c7345;
+  --ok-bg:      #e4f2ea;
+  --stop:       #bc2a1e;
+  --stop-bg:    #fbe8e6;
+}
+
+html { scroll-behavior: smooth; scroll-padding-top: 5.5rem; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--jp);
+  font-size: 17px;
+  line-height: 1.85;
+  -webkit-text-size-adjust: 100%;
+}
+
+.wrap { max-width: var(--measure); margin: 0 auto; padding: 0 1.15rem 5rem; }
+
+/* ---------- 見出し・本文 ---------- */
+h1, h2, h3 { text-wrap: balance; line-height: 1.35; margin: 0; }
+h1 { font-size: 1.95rem; letter-spacing: .01em; }
+h2 { font-size: 1.32rem; }
+h3 { font-size: 1.05rem; }
+p  { margin: 0; }
+a  { color: var(--amber); text-underline-offset: .18em; }
+:focus-visible { outline: 3px solid var(--amber); outline-offset: 3px; border-radius: 2px; }
+
+/* 機械が出す・機械に入れる文字は等幅 */
+code, .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+code {
+  font-size: .93em;
+  background: var(--amber-soft);
+  color: var(--ink);
+  padding: .1em .38em;
+  border-radius: var(--r);
+  word-break: break-all;
+}
+
+/* ---------- ヘッダ ---------- */
+.masthead { padding: 2.6rem 0 1.6rem; display: flex; flex-direction: column; gap: .85rem; }
+.eyebrow {
+  font-family: var(--mono); font-size: .74rem; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--amber); font-weight: 700;
+}
+.lede { color: var(--ink-2); font-size: 1.02rem; }
+
+/* ---------- ステップ目次 (上に貼り付く) ---------- */
+.stepnav {
+  position: sticky; top: 0; z-index: 20;
+  background: var(--paper);
+  background: color-mix(in srgb, var(--paper) 92%, transparent);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--rule);
+  margin: 0 -1.15rem 2rem;
+  padding: .55rem 1.15rem;
+  display: flex; gap: .4rem; overflow-x: auto;
+  scrollbar-width: none;
+}
+.stepnav::-webkit-scrollbar { display: none; }
+.stepnav a {
+  flex: 0 0 auto;
+  font-family: var(--mono); font-size: .78rem; font-weight: 700;
+  letter-spacing: .04em; text-decoration: none;
+  color: var(--ink-2); background: var(--card);
+  border: 1px solid var(--rule); border-radius: var(--r);
+  padding: .3rem .6rem;
+}
+.stepnav a:hover, .stepnav a:focus-visible { color: var(--amber); border-color: var(--amber); }
+
+/* ---------- セクション ---------- */
+section { display: flex; flex-direction: column; gap: 1.05rem; margin-bottom: 3.2rem; }
+.sec-head { display: flex; flex-direction: column; gap: .3rem; }
+.tag {
+  font-family: var(--mono); font-size: .72rem; letter-spacing: .14em;
+  text-transform: uppercase; font-weight: 700; color: var(--ink-3);
+}
+.step .tag { color: var(--amber); }
+
+/* 手順の連番: 実際に順番どおりやる必要があるので番号を振る */
+.step { scroll-margin-top: 5.5rem; }
+.step h2 { display: flex; align-items: baseline; gap: .6rem; }
+.step h2 .n {
+  font-family: var(--mono); font-size: .95em; font-weight: 700;
+  color: var(--card); background: var(--amber);
+  min-width: 1.85em; text-align: center;
+  border-radius: var(--r); line-height: 1.6;
+  flex: 0 0 auto;
+}
+
+/* ---------- 図版 ---------- */
+figure { margin: .3rem 0; display: flex; flex-direction: column; gap: .5rem; }
+figure img {
+  display: block; width: 100%; height: auto;
+  border: 1px solid var(--rule); border-radius: var(--r);
+  background: var(--lcd);
+}
+figure.plain img { background: transparent; }
+/* 注釈付きの横長図: 狭い画面では縮むと文字が読めないので横スクロールさせる */
+figure.wide { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+figure.wide img { min-width: 620px; }
+figure.wide figcaption { position: sticky; left: 0; }
+figcaption { font-size: .87rem; color: var(--ink-3); }
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: .8rem; }
+.pair figure img { border-radius: var(--r); }
+@media (max-width: 30rem) { .pair { grid-template-columns: 1fr; } }
+
+/* ---------- 注意・チェックポイント ---------- */
+.note {
+  border: 1px solid var(--rule); border-radius: var(--r);
+  background: var(--card); padding: .95rem 1.05rem;
+  display: flex; flex-direction: column; gap: .45rem;
+}
+.note .lbl {
+  font-family: var(--mono); font-size: .72rem; font-weight: 700;
+  letter-spacing: .12em; text-transform: uppercase;
+}
+.note.warn  { background: var(--amber-soft); border-color: var(--amber); }
+.note.warn  .lbl { color: var(--amber); }
+.note.good  { background: var(--ok-bg);   border-color: var(--ok); }
+.note.good  .lbl { color: var(--ok); }
+.note.stop  { background: var(--stop-bg); border-color: var(--stop); }
+.note.stop  .lbl { color: var(--stop); }
+
+/* ---------- リスト ---------- */
+ul, ol { margin: 0; padding-left: 1.35rem; display: flex; flex-direction: column; gap: .45rem; }
+li::marker { color: var(--ink-3); }
+
+/* ---------- 表 ---------- */
+.scroller { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+table { border-collapse: collapse; width: 100%; font-size: .95rem; min-width: 22rem; }
+th, td { text-align: left; padding: .6rem .7rem; border-bottom: 1px solid var(--rule); vertical-align: top; line-height: 1.6; }
+th { font-size: .8rem; letter-spacing: .05em; color: var(--ink-3); font-weight: 700; white-space: nowrap; }
+tbody tr:last-child td { border-bottom: 0; }
+
+/* ---------- 折りたたみ (うまくいかないとき) ---------- */
+details {
+  border: 1px solid var(--rule); border-radius: var(--r);
+  background: var(--card); padding: 0 1rem;
+}
+details[open] { padding-bottom: .9rem; }
+summary {
+  cursor: pointer; padding: .8rem 0; font-weight: 700; font-size: .95rem;
+  list-style: none; display: flex; align-items: center; gap: .5rem; color: var(--ink);
+}
+summary::-webkit-details-marker { display: none; }
+summary::before {
+  content: "＋"; font-family: var(--mono); color: var(--amber); font-size: .95em;
+}
+details[open] summary::before { content: "−"; }
+details > *:not(summary) { margin-top: .2rem; }
+
+/* ---------- 入力する文字を大きく見せるブロック ---------- */
+.typein {
+  font-family: var(--mono); font-size: 1.5rem; font-weight: 700;
+  letter-spacing: .04em; text-align: center;
+  background: var(--lcd); color: #35d6e0;
+  border-radius: var(--r); padding: .9rem 1rem;
+  overflow-x: auto; white-space: nowrap;
+}
+
+hr { border: 0; border-top: 1px solid var(--rule); margin: 0; }
+.foot { color: var(--ink-3); font-size: .85rem; padding-top: 2rem; }
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <span class="eyebrow">Setup Guide</span>
+    <h1>ちびスタックちゃん<br>はじめの設定</h1>
+    <p class="lede">
+      最初にやることは、<strong>おうちの Wi-Fi を教えてあげること</strong>だけです。
+      全 5 ステップ、10 分ほどで終わります。
+    </p>
+  </header>
+
+  <nav class="stepnav" aria-label="ステップ">
+    <a href="#prep">準備</a>
+    <a href="#s1">1 電源</a>
+    <a href="#s2">2 SETUP MODE</a>
+    <a href="#s3">3 スマホ接続</a>
+    <a href="#s4">4 192.168.4.1</a>
+    <a href="#s5">5 Wi-Fi入力</a>
+    <a href="#done">完了確認</a>
+    <a href="#use">使い方</a>
+    <a href="#help">困ったとき</a>
+  </nav>
+
+  <!-- ============================ 準備 ============================ -->
+  <section id="prep">
+    <div class="sec-head">
+      <span class="tag">Before you start</span>
+      <h2>用意するもの</h2>
+    </div>
+
+    <ul>
+      <li>スマホ（またはパソコン）</li>
+      <li>USB充電器 — スマホ用でOK</li>
+      <li><strong>おうちの Wi-Fi の名前（SSID）とパスワード</strong><br>
+        ルーター本体に貼ってあるシールに書いてあります。<strong>先に手元に用意してください。</strong></li>
+    </ul>
+
+    <div class="note warn">
+      <span class="lbl">いちばん大事な注意</span>
+      <p>ちびスタックちゃんは <strong>2.4GHz の Wi-Fi にしかつながりません</strong>。
+        5GHz（名前の最後が <code>-a</code> <code>-A</code> <code>5G</code> のもの）を入れると、
+        何度やっても失敗します。→ <a href="#s5">STEP 5</a></p>
+    </div>
+
+    <h3>本体のボタンは 2 つだけ</h3>
+    <figure class="plain wide">
+      <img src="images/device-buttons.png" alt="本体の正面と左側面。画面全体が押しボタン、左側面の丸ボタンがリセット、下部がUSB-C端子。">
+    
+      <figcaption>← 横にスクロールすると、注釈が大きく読めます →</figcaption>
+    </figure>
+    <div class="note">
+      <span class="lbl">覚えること</span>
+      <p>画面は、スマホのように <strong>なでても・軽く触れても反応しません</strong>。
+        本体ごと奥へ「<strong>カチッ</strong>」と手ごたえがあるまで押し込みます。
+        反応しないときは、たいてい押し込みが浅いだけです。</p>
+    </div>
+  </section>
+
+  <!-- ============================ STEP 1 ============================ -->
+  <section id="s1" class="step">
+    <div class="sec-head">
+      <span class="tag">Step 1 / 5 ・ 10秒</span>
+      <h2><span class="n">1</span>USBをつないで電源を入れる</h2>
+    </div>
+
+    <p>USB-C ケーブルを充電器につなぐだけです。<strong>電源スイッチはありません。</strong>
+      10 秒ほどで、この画面になります。</p>
+
+    <figure>
+      <img src="images/lcd-connecting.png" alt="本体画面: Connecting WiFi と表示され、点が増えていく">
+      <figcaption>Wi-Fi をさがしている画面。点が増えていきます。</figcaption>
+    </figure>
+
+    <div class="note good">
+      <span class="lbl">これで正常です</span>
+      <p>青い文字は<strong>前の持ち主の家の Wi-Fi 名</strong>です。あなたの家には無いので、
+        当然見つかりません。そのまま STEP 2 へ進んでください。</p>
+    </div>
+
+    <details>
+      <summary>顔が出てしまった場合は？</summary>
+      <p>すでにこの家の Wi-Fi につながっています。設定は不要です
+        → <a href="#use">使い方</a>へ。<br>
+        Wi-Fi を変えたい場合は、<strong>画面を押したまま 3 秒</strong>キープすると
+        STEP 2 の画面に入れます。</p>
+    </details>
+  </section>
+
+  <!-- ============================ STEP 2 ============================ -->
+  <section id="s2" class="step">
+    <div class="sec-head">
+      <span class="tag">Step 2 / 5 ・ 20秒</span>
+      <h2><span class="n">2</span>「SETUP MODE」が出るのを待つ</h2>
+    </div>
+
+    <p><strong>15 秒ほどそのまま待ちます。</strong>
+      「ピッ、ポーン」と音が鳴って、オレンジ色の帯の画面に自動で切り替わります。</p>
+
+    <figure>
+      <img src="images/lcd-setup-mode.png" alt="本体画面: オレンジの帯にSETUP MODE。ChibiStackChan-Setup、pass: stackchan、http://192.168.4.1 と表示">
+      <figcaption>この画面が出たら準備 OK。次のステップで使う情報が書いてあります。</figcaption>
+    </figure>
+
+    <div class="scroller">
+      <table>
+        <thead><tr><th>画面の表示</th><th>意味</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="mono">1) Connect WiFi<br>ChibiStackChan-Setup<br>pass: stackchan</td>
+            <td>STEP 3 でつなぐ Wi-Fi の名前とパスワード</td>
+          </tr>
+          <tr>
+            <td class="mono">2) Open browser<br>http://192.168.4.1</td>
+            <td>STEP 4 で開くアドレス</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note">
+      <span class="lbl">待たずに進みたいとき</span>
+      <p>点が出ている間に<strong>画面をカチッと押したまま 1 秒</strong>キープすると、
+        すぐ切り替わります。（すでに顔が出ているときは<strong>押したまま 3 秒</strong>）</p>
+    </div>
+
+    <details>
+      <summary>うまくいかないとき</summary>
+      <div class="scroller">
+        <table>
+          <tbody>
+            <tr><td>15秒たっても切り替わらない</td><td>もう10秒待つ。変わらなければUSBを抜き差しして最初から</td></tr>
+            <tr><td>画面が真っ暗</td><td>左側面のボタンを<strong>短く1回</strong>ポチッと押す、またはUSBを抜き差し</td></tr>
+            <tr><td>顔が出てしまった</td><td>画面を<strong>押したまま3秒</strong>キープ</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </details>
+  </section>
+
+  <!-- ============================ STEP 3 ============================ -->
+  <section id="s3" class="step">
+    <div class="sec-head">
+      <span class="tag">Step 3 / 5 ・ 1分</span>
+      <h2><span class="n">3</span>スマホをちびスタックちゃんにつなぐ</h2>
+    </div>
+
+    <p>ここが<strong>いちばん間違えやすいところ</strong>です。ゆっくり進めてください。<br>
+      いまから、スマホの接続先を<strong>一時的にちびスタックちゃん本体に切り替えます</strong>。
+      設定が終わったら、おうちの Wi-Fi に戻します。</p>
+
+    <h3>3-1　スマホの「設定 › Wi-Fi」を開く</h3>
+    <p>一覧に <code>ChibiStackChan-Setup</code> が出てくるので、これをタップします。</p>
+    <figure class="plain">
+      <img src="images/phone-wifi-list.png" alt="スマホのWi-Fi設定。ChibiStackChan-Setup が赤枠で示されている">
+    </figure>
+    <div class="note warn">
+      <span class="lbl">出てこないときは</span>
+      <p><strong>Wi-Fi のスイッチを一度 OFF にして、すぐ ON に戻してください。</strong>
+        一覧が読み込み直されて出てきます。よくあることなので、あわてなくて大丈夫です。</p>
+    </div>
+
+    <h3>3-2　パスワードを入れる</h3>
+    <div class="typein">stackchan</div>
+    <p><strong>すべて半角の小文字</strong>で入力し、右上の「接続」を押します。</p>
+    <figure class="plain">
+      <img src="images/phone-wifi-pass.png" alt="パスワード欄に stackchan と入力し、右上の接続を押す">
+    </figure>
+
+    <h3>3-3　「インターネット未接続」と出ても、そのまま進む</h3>
+    <figure class="plain">
+      <img src="images/phone-no-internet.png" alt="Wi-Fi設定に「インターネットに接続していません」と表示されている">
+    </figure>
+    <div class="note good">
+      <span class="lbl">これで正常です</span>
+      <p>「インターネットに接続していません」「安全ではありません」などの警告が出ますが、
+        <strong>それが正しい状態</strong>です。ちびスタックちゃん本体は、インターネットに
+        つながっていない小さな Wi-Fi だからです。<br>
+        <strong>設定が終わるまで、スマホを元の Wi-Fi に戻さないでください。</strong></p>
+    </div>
+
+    <details>
+      <summary>うまくいかないとき</summary>
+      <div class="scroller">
+        <table>
+          <tbody>
+            <tr><td><code>ChibiStackChan-Setup</code> が一覧に出ない</td>
+                <td><strong>Wi-Fi のスイッチを一度OFFにして、すぐONに戻す</strong>と出てきます。それでも出なければ、本体の画面がオレンジの SETUP MODE か確認（<a href="#s2">STEP 2</a>）</td></tr>
+            <tr><td>パスワードが違うと言われる</td>
+                <td><code>stackchan</code> を<strong>半角小文字</strong>で。日本語入力がオンだと全角になります</td></tr>
+            <tr><td>接続してもすぐ元のWi-Fiに戻る</td>
+                <td>スマホの「自動接続」が働いています。もう一度手動で選び直してください</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </details>
+  </section>
+
+  <!-- ============================ STEP 4 ============================ -->
+  <section id="s4" class="step">
+    <div class="sec-head">
+      <span class="tag">Step 4 / 5 ・ 1分</span>
+      <h2><span class="n">4</span>ブラウザで設定ページを開く</h2>
+    </div>
+
+    <p>スマホのブラウザ（Safari など）を開き、<strong>アドレス欄</strong>に半角で入力します。</p>
+    <div class="typein">192.168.4.1</div>
+
+    <figure class="plain">
+      <img src="images/phone-safari-url.png" alt="ブラウザのアドレス欄に192.168.4.1と入力し、検索候補ではなく「このページを開く」をタップする">
+    </figure>
+
+    <div class="note stop">
+      <span class="lbl">最大のつまずきポイント</span>
+      <p>入力すると、下に「<strong>検索候補</strong>」と「<strong>このページを開く</strong>」の
+        2 種類が出ます。<strong>検索候補ではなく、<code>192.168.4.1</code> そのもの
+        （または右上の「開く」）をタップ</strong>してください。<br>
+        検索を選ぶと Google の検索結果が出てしまい、設定画面にたどり着けません。</p>
+    </div>
+
+    <ul>
+      <li>数字も「<code>.</code>（ピリオド）」も<strong>すべて半角</strong>です</li>
+      <li><code>http://</code> は付けても付けなくても構いません</li>
+      <li>アドレス欄が見つからないときは、画面を下に少しスクロールすると出てきます</li>
+    </ul>
+
+    <details>
+      <summary>うまくいかないとき</summary>
+      <div class="scroller">
+        <table>
+          <tbody>
+            <tr><td>「サーバが見つかりません」</td>
+                <td><a href="#s3">STEP 3</a> に戻り、スマホが <code>ChibiStackChan-Setup</code> につながっているか確認</td></tr>
+            <tr><td>Googleの検索結果が出た</td>
+                <td>検索候補をタップしています。もう一度入力して「開く」の方を選んでください</td></tr>
+            <tr><td>いつまでも読み込み中</td>
+                <td>スマホの<strong>モバイル通信（4G/5G）を一時的にオフ</strong>にすると通りやすくなります</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </details>
+  </section>
+
+  <!-- ============================ STEP 5 ============================ -->
+  <section id="s5" class="step">
+    <div class="sec-head">
+      <span class="tag">Step 5 / 5 ・ 2分</span>
+      <h2><span class="n">5</span>おうちの Wi-Fi を入力する</h2>
+    </div>
+
+    <p>オレンジ色の帯の「SETUP MODE / はじめの設定」というページが開きます。
+      <strong>入力するのは 2 つだけ</strong>です。</p>
+
+    <figure class="plain wide">
+      <img src="images/webui-setup-mode-annot.jpg" alt="はじめの設定画面。SSID欄、パスワード欄、2.4GHzの注意、保存してつなぐボタンに番号と説明が付いている">
+    
+      <figcaption>← 横にスクロールすると、注釈が大きく読めます →</figcaption>
+    </figure>
+
+    <h3>入れるのは「2.4GHz」の方です</h3>
+    <p>Wi-Fi の一覧に、<strong>末尾だけ違う似た名前が 2 つ</strong>並んでいることがあります。</p>
+    <figure class="plain wide">
+      <img src="images/ssid-24ghz.png" alt="2.4GHzと5GHzの見分け方。末尾が-gや2Gなら○、-aや5Gなら×">
+    </figure>
+
+    <ul>
+      <li>迷ったら、<strong>スマホの Wi-Fi 一覧に出ている名前をそのまま</strong>入力してください
+        （<a href="#s3">STEP 3</a> で見た一覧です）</li>
+      <li>ルーターのシールでは、パスワードは「<strong>暗号化キー</strong>」「<strong>KEY</strong>」
+        「<strong>PSK-AES</strong>」などと書かれていることがあります</li>
+      <li><strong>大文字・小文字・半角</strong>を、シールのとおり正確に入力してください</li>
+    </ul>
+
+    <p>入力したら、青い「<strong>保存してつなぐ</strong>」を押します。</p>
+  </section>
+
+  <!-- ============================ 完了確認 ============================ -->
+  <section id="done">
+    <div class="sec-head">
+      <span class="tag">Finish</span>
+      <h2>セットアップ完了の確認</h2>
+    </div>
+
+    <p>「保存してつなぐ」を押すと、10 秒ほどで自動的に再起動します。</p>
+
+    <div class="pair">
+      <figure>
+        <img src="images/lcd-ip.png" alt="本体画面にIPアドレスが表示されている">
+        <figcaption><strong>1.</strong> IPアドレス（<code>192.168.x.x</code>）が数秒表示されます。つながった証拠です。</figcaption>
+      </figure>
+      <figure>
+        <img src="images/lcd-face.png" alt="本体画面に顔が表示されている">
+        <figcaption><strong>2.</strong> 顔が出て「こんにちは、ちびスタックちゃんだよ」と挨拶したら完了です。</figcaption>
+      </figure>
+    </div>
+
+    <div class="note good">
+      <span class="lbl">最後に</span>
+      <p>スマホの Wi-Fi を、<strong>おうちの Wi-Fi に戻してください</strong>。<br>
+        表示された IPアドレスは覚えなくて大丈夫です。あとで「<strong>アイピー教えて</strong>」と
+        話しかければ読み上げてくれます。</p>
+    </div>
+
+    <details>
+      <summary>完了しないとき</summary>
+      <div class="scroller">
+        <table>
+          <tbody>
+            <tr><td>また SETUP MODE に戻ってしまう</td>
+                <td>Wi-Fi名かパスワードが違います。<strong>5GHz を入れていないか</strong>を最初に確認（<a href="#s5">STEP 5</a>）</td></tr>
+            <tr><td><code>WiFi NG</code> と表示される</td>
+                <td>同上。<a href="#s3">STEP 3</a> からやり直してください</td></tr>
+            <tr><td>顔は出るが無言</td>
+                <td>Wi-Fi はつながっています。数分待っても喋らなければ APIキー管理者へ連絡</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </details>
+  </section>
+
+  <hr>
+
+  <!-- ============================ 使い方 ============================ -->
+  <section id="use" style="margin-top:3.2rem">
+    <div class="sec-head">
+      <span class="tag">Daily use</span>
+      <h2>話しかけ方</h2>
+    </div>
+
+    <p><strong>ふつうに話しかけるだけ</strong>です。30〜60cm くらいの距離で、
+      ふつうの声の大きさでどうぞ。</p>
+
+    <div class="scroller">
+      <table>
+        <thead><tr><th>モード</th><th>話しかけ方</th></tr></thead>
+        <tbody>
+          <tr><td>なんでも返事</td><td>何を言っても返事します</td></tr>
+          <tr><td>呼びかけワード</td><td>「<strong>スタックちゃん</strong>、今日の天気は？」のように名前を呼んでから話す</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>画面（顔）を<strong>カチッと 1 回押す</strong>と、呼びかけなしで聞いてくれます
+      （ピッと鳴ったら話す）。</p>
+
+    <h3>画面の色 ＝ いまの状態</h3>
+    <div class="scroller">
+      <table>
+        <tbody>
+          <tr><td>黒</td><td>待機中（話しかけてOK）</td></tr>
+          <tr><td>緑</td><td>聞いています（録音中）</td></tr>
+          <tr><td>紺</td><td>考え中（ちょっと待ってね）</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>できること</h3>
+    <ul>
+      <li><strong>おしゃべり</strong> — 質問、雑談、なんでも</li>
+      <li><strong>天気</strong> — 「今日の天気は？」「傘いる？」</li>
+      <li><strong>時刻・日付</strong> — 「いま何時？」</li>
+      <li><strong>タイマー</strong> — 「3分タイマーかけて」。「タイマーやめて」「あと何分？」もOK</li>
+      <li><strong>おやすみ</strong> — 3分間話しかけないと居眠りします。声をかけると飛び起きます</li>
+      <li><strong>物音への反応</strong> — 電子レンジの「チーン」などにたまに反応します。ご愛嬌です</li>
+    </ul>
+  </section>
+
+  <!-- ============================ 設定画面 ============================ -->
+  <section id="settings">
+    <div class="sec-head">
+      <span class="tag">Settings</span>
+      <h2>音量・声・キャラを変える</h2>
+    </div>
+
+    <p>セットアップが終わったあとは、<strong>おうちの Wi-Fi 経由で</strong>設定画面を開けます。
+      スマホを<strong>ちびスタックちゃんと同じ Wi-Fi</strong> につないで、
+      ブラウザに次のどちらかを入力します。</p>
+
+    <div class="typein">chibi-chan.local</div>
+    <p style="text-align:center;color:var(--ink-3);font-size:.9rem">または、起動時に表示された IPアドレス</p>
+
+    <div class="note">
+      <span class="lbl">開けないとき</span>
+      <p><code>.local</code> はスマホの機種によって開けないことがあります。
+        その場合は IPアドレスを使ってください（こちらは確実です）。
+        忘れたら「<strong>アイピー教えて</strong>」と話しかけると読み上げてくれます。<br>
+        IPアドレスは、停電やルーター再起動のあとに<strong>変わることがあります</strong>。</p>
+    </div>
+
+    <figure class="plain wide">
+      <img src="images/webui-menu-annot.jpg" alt="設定画面のメニュー。設定、ロール、現在のロール確認、しゃべらせる、文字で質問する">
+    </figure>
+
+    <h3>設定画面で変えられること</h3>
+    <figure class="plain wide">
+      <img src="images/webui-settings-annot.jpg" alt="設定画面。さわってよい所が緑、さわらない所が赤で示されている">
+    
+      <figcaption>← 横にスクロールすると、注釈が大きく読めます →</figcaption>
+    </figure>
+
+    <div class="scroller">
+      <table>
+        <thead><tr><th>項目</th><th>説明</th></tr></thead>
+        <tbody>
+          <tr><td>スピーカー音量</td><td>0〜255。うるさければ 80、静かなら 150 など</td></tr>
+          <tr><td>VoiceVox 話者</td><td>声のキャラクターを一覧から選ぶだけ</td></tr>
+          <tr><td>音量トリガ感度</td><td>生活音に反応しすぎるなら<strong>上げる</strong>、呼んでも気づかないなら<strong>下げる</strong></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>変えたら一番下の青い「<strong>保存して再起動</strong>」を押します。
+      <strong>空欄のままの項目は変更されません。</strong></p>
+
+    <h3>キャラ（性格）を変える</h3>
+    <p>メニューの「ロール（キャラ設定）」で、性格を自由な文章で決められます。
+      枠に文章を入力して「送信」するだけです（空欄で送信すると元に戻ります）。</p>
+    <div class="note">
+      <span class="lbl">書き方の例</span>
+      <p>あなたはコッテコテの大阪人です。ボケとツッコミを忘れずに使って下さい。</p>
+      <p>あなたは物知りでやさしいおばあちゃんです。ゆっくり丁寧に話します。</p>
+    </div>
+  </section>
+
+  <!-- ============================ 触らないで ============================ -->
+  <section id="dontouch">
+    <div class="sec-head">
+      <span class="tag">Do not touch</span>
+      <h2>さわらないでほしいところ</h2>
+    </div>
+
+    <div class="note stop">
+      <span class="lbl">APIキー / 鍵情報クリア</span>
+      <p>設定画面の「<strong>APIキー（重要設定）</strong>」と赤いボタンの
+        「<strong>鍵情報クリア</strong>」は、この子が聞いたり喋ったりするための<strong>心臓部</strong>です。
+        APIキーは、この子を渡した人（<strong>APIキー管理者</strong>）のものが設定済みで、
+        料金もその人のアカウントに請求されます。</p>
+    </div>
+
+    <ul>
+      <li>APIキーは<strong>変更しないでください</strong>
+        （まちがえて開いても、何も入力せず保存すれば大丈夫です）</li>
+      <li>赤い「鍵情報クリア」を押すと<strong>すべて消えて動かなくなります</strong></li>
+      <li>触ってしまって喋らなくなったら、<strong>APIキー管理者に連絡</strong>してください</li>
+    </ul>
+  </section>
+
+  <!-- ============================ 困ったとき ============================ -->
+  <section id="help">
+    <div class="sec-head">
+      <span class="tag">Troubleshooting</span>
+      <h2>困ったときは</h2>
+    </div>
+
+    <div class="note warn">
+      <span class="lbl">引っ越した / ルーターを買い替えた</span>
+      <p><a href="#s1">STEP 1</a> からもう一度やり直してください。
+        すでに顔が出ている場合は、<strong>画面を押したまま 3 秒</strong>キープすると
+        SETUP MODE に入れます。</p>
+    </div>
+
+    <div class="scroller">
+      <table>
+        <thead><tr><th>症状</th><th>対処</th></tr></thead>
+        <tbody>
+          <tr><td>反応しない・画面が暗い</td><td>USBを抜き差しするか、左側面のボタンを短くポチッと押して再起動（データは消えません）</td></tr>
+          <tr><td>画面を押しても反応がない</td><td>押し込みが浅いかも。「カチッ」と手応えがあるまで押してください</td></tr>
+          <tr><td>SETUP MODE から進まない</td><td>Wi-Fi の登録がまだ、または名前/パスワードが違います → <a href="#s3">STEP 3〜5</a></td></tr>
+          <tr><td>起動しても挨拶しない・無言</td><td>Wi-Fi が切れている可能性。<a href="#s1">STEP 1</a> からやり直すか、再起動</td></tr>
+          <tr><td>緑にならない（聞いてくれない）</td><td>もう少し近くで・はっきり話す。「音量トリガ感度」の数値を下げる</td></tr>
+          <tr><td>「うまく聞き取れなかったよ」と言う</td><td>通信の一時的な不調です。少し待ってもう一度</td></tr>
+          <tr><td>「ただいま混み合っています」と言う</td><td>AIサービス側の混雑。数分待つ</td></tr>
+          <tr><td>何を言っても無言</td><td>Wi-Fi が切れたか、APIの問題。再起動して直らなければ APIキー管理者へ連絡</td></tr>
+          <tr><td>設定画面が開けない</td><td>同じ Wi-Fi にいるか確認。「アイピー教えて」でアドレスを確認</td></tr>
+          <tr><td>テレビや生活音に反応しすぎる</td><td>「音量トリガ感度」の数値を上げる。または呼びかけワードモードに</td></tr>
+          <tr><td>画面が真っ暗になった</td><td>側面のリセットを長く押しすぎた可能性。<strong>もう一度短くポチッと</strong>押すか、USBを抜き差し（壊れていません）</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note good">
+      <span class="lbl">安心してください</span>
+      <p>再起動は USB の抜き差しでいつでも OK。設定やキャラは本体に保存されているので消えません。</p>
+    </div>
+  </section>
+
+  <!-- ============================ お金 ============================ -->
+  <section id="cost">
+    <div class="sec-head">
+      <span class="tag">Cost</span>
+      <h2>かかるお金について</h2>
+    </div>
+    <p>この子は喋るたびにインターネットの AI サービスを少しずつ使います。
+      料金は<strong>この子を渡した人（APIキー管理者）のアカウント</strong>に請求されます。
+      <strong>1 回の会話で 1 円未満、ふつうに使えば月に数百円程度</strong>です。</p>
+    <p>常識の範囲で好きなだけ話しかけて大丈夫ですが、ラジオ代わりに一日中
+      話し続けるような使い方は APIキー管理者と相談してください。</p>
+  </section>
+
+  <hr>
+  <p class="foot">ちびスタックちゃん 取扱説明書 — 困ったときは、この子を渡した人（APIキー管理者）へ。</p>
+
+</div>
+
+</body>
+</html>

@@ -275,7 +275,10 @@ Gemini の無料枠が混み合って不通になりがちな場合、会話だ�
 ```
 chibi-stackchan/
 ├── platformio.ini            # ATOMS3R (arduino単独・PSRAM有効)
-├── docs/images/              # Web UI スクリーンショット
+├── MANUAL.md                 # 受け取った人向けの取扱説明書
+├── docs/
+│   ├── setup-guide.html      # 初回セットアップ手順だけを図解した単体HTML（スマホ向け）
+│   └── images/               # Web UI スクショ + 説明用の作図（本体LCD再現・注釈付き）
 ├── include/
 │   ├── secrets.h.example     # 鍵テンプレート
 │   └── secrets.h             # 実際の鍵（git管理外・無くても可）
