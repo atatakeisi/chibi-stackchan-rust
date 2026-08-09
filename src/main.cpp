@@ -1403,6 +1403,17 @@ static const char kWakeVoicePath[] = "/wake.mp3";  // SPIFFSキャッシュ (ネ
 uint32_t last_activity_ms = 0;  // 最後に「会話」があった時刻 (認識成功/発話/ボタン)
 bool sleeping = false;
 
+// ---- Wi-Fi が切れているときのお知らせ -------------------------------------
+// 切れたことに気づかないまま会話処理へ入ると、HTTPS のタイムアウト待ち
+// (Whisper 10秒 / TTS 25秒) の間ずっと無言になり、裏で走る WiFi の再接続スキャンと
+// 相まって本体が温まる。会話に入る手前で断ち、キャッシュ音声で状況を知らせる。
+static const char kNoNetSpeech[]    = "あれぇ、ワイファイ来てますかぁ？";
+static const char kNoNetVoicePath[] = "/nonet.mp3";  // SPIFFSキャッシュ (ネット不要)
+constexpr uint32_t kNoNetNoticeIntervalMs = 30UL * 1000UL;  // 連呼しないための間隔
+uint32_t last_nonet_notice_ms = 0;
+
+inline bool wifiConnected() { return WiFi.status() == WL_CONNECTED; }
+
 // SPIFFS にキャッシュした MP3 を再生し終わるまでブロック。無ければ false
 bool speakFromSPIFFS(const char* path) {
   if (!SPIFFS.begin(true) || !SPIFFS.exists(path)) return false;
@@ -1428,12 +1439,28 @@ bool speakFromSPIFFS(const char* path) {
 void prepareWakeVoice() {
   String cachedSpk = nvs_get_string("chibi", "wake_spk");
   if (cachedSpk == TTS_SPEAKER_NO && SPIFFS.begin(true) && SPIFFS.exists(kWakeVoicePath)) return;
+  if (!wifiConnected()) return;  // 圏外では取りに行かない (タイムアウト待ちと発熱を避ける)
   printf("[SLEEP] 起床ボイスをキャッシュ中 (話者%s)...\n", TTS_SPEAKER_NO.c_str());
   if (Voicevox_tts_download(kWakeUpSpeech, TTS_PARMS.c_str(), kWakeVoicePath)) {
     nvs_set_string("chibi", "wake_spk", TTS_SPEAKER_NO);
     printf("[SLEEP] 起床ボイス保存OK\n");
   } else {
     printf("[SLEEP] 起床ボイス取得失敗 (起床時は通常TTSで喋る)\n");
+  }
+}
+
+// Wi-Fi 断のお知らせボイスも同じ要領でキャッシュしておく。
+// 取りに行けるのは「つながっている今」だけなので、起床ボイスと同じ暇なときに作る
+void prepareOfflineVoice() {
+  String cachedSpk = nvs_get_string("chibi", "nonet_spk");
+  if (cachedSpk == TTS_SPEAKER_NO && SPIFFS.begin(true) && SPIFFS.exists(kNoNetVoicePath)) return;
+  if (!wifiConnected()) return;
+  printf("[NET] お知らせボイスをキャッシュ中 (話者%s)...\n", TTS_SPEAKER_NO.c_str());
+  if (Voicevox_tts_download(kNoNetSpeech, TTS_PARMS.c_str(), kNoNetVoicePath)) {
+    nvs_set_string("chibi", "nonet_spk", TTS_SPEAKER_NO);
+    printf("[NET] お知らせボイス保存OK\n");
+  } else {
+    printf("[NET] お知らせボイス取得失敗 (次に眠るときに再挑戦)\n");
   }
 }
 
@@ -1875,6 +1902,24 @@ void sw_tone() {
   M5.Mic.begin();
 }
 
+// Wi-Fi が切れていたら知らせて true を返す。つながっていれば何もせず false。
+// 会話処理 (listen_and_chat) の手前に挟むことで、無言のタイムアウト待ちを避ける。
+bool noticeOffline() {
+  if (wifiConnected()) return false;
+  printf("[NET] Wi-Fi 未接続 -> 会話をスキップ\n");
+  avatar.setExpression(Expression::Sad);
+  // 話しかけるたびに繰り返すとうるさいので間隔を空ける
+  if (last_nonet_notice_ms == 0 ||
+      millis() - last_nonet_notice_ms > kNoNetNoticeIntervalMs) {
+    last_nonet_notice_ms = millis();
+    if (!speakFromSPIFFS(kNoNetVoicePath)) sw_tone();  // 未キャッシュなら音だけで知らせる
+  }
+  avatar.setExpression(Expression::Neutral);
+  showFaceState(FACE_IDLE);
+  last_activity_ms = millis();  // 直後に眠り直さない
+  return true;
+}
+
 // 録音 → Whisper → (必要なら呼びかけ判定) → Gemini
 // require_wake=true のときは呼びかけワードを含まない発話を無視する。
 void listen_and_chat(bool require_wake) {
@@ -2162,8 +2207,10 @@ void loop() {
       avatar.setExpression(Expression::Neutral);
     }
     last_activity_ms = millis();
-    sw_tone();
-    listen_and_chat(false);
+    if (!noticeOffline()) {
+      sw_tone();
+      listen_and_chat(false);
+    }
     head::focus(false);
   }
 
@@ -2225,7 +2272,8 @@ void loop() {
       printf("[SLEEP] おやすみ...\n");
       avatar.setExpression(Expression::Sleepy);
       head::focus(true);   // キョロキョロ停止 + 脱力
-      prepareWakeVoice();  // 暇なうちに起床ボイスをキャッシュしておく
+      prepareWakeVoice();     // 暇なうちに起床ボイスをキャッシュしておく
+      prepareOfflineVoice();  // Wi-Fi断のお知らせボイスも同様
     }
 
     // 呼びかけ待ち: 音量トリガ -> Whisper -> 呼びかけワード照合
@@ -2245,7 +2293,7 @@ void loop() {
           avatar.setExpression(Expression::Neutral);
           last_activity_ms = millis();
         } else {
-          listen_and_chat(true);
+          if (!noticeOffline()) listen_and_chat(true);
           head::focus(false);
         }
       }
