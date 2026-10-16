@@ -44,6 +44,9 @@
 #include "Whisper.h"
 #include "HeadServo.h"
 #include "WeatherClock.h"
+#ifdef STACKCHAN_RUST_AUDIO
+#include "RustAudioCore.h"
+#endif
 
 // NVS が空のときの初期値 (include/secrets.h, git管理外)
 #include "secrets.h"
@@ -1704,6 +1707,49 @@ String SpeechToText(bool use_preroll = false) {
   {
     const int16_t* wav = (const int16_t*)(audio->GetBuffer() + 44);
     const size_t total = (audio->GetSize() - 44) / 2;
+#ifdef STACKCHAN_RUST_AUDIO
+    StackchanAudioProfile profile{};
+    const uint32_t started = micros();
+    const bool ok = stackchan_audio_profile(wav, total, pre_n, vad_threshold, &profile);
+    const uint32_t elapsed = micros() - started;
+    if (ok) {
+#ifdef STACKCHAN_RUST_VERIFY
+      // Measure the equivalent original two-pass analysis separately from serial I/O.
+      const uint32_t cpp_started = micros();
+      StackchanAudioProfile reference{};
+      for (size_t i = 0; i < total; ++i) {
+        const uint32_t v = abs((int)wav[i]);
+        uint32_t& part = i < pre_n ? reference.pre_peak : reference.live_peak;
+        if (v > part) part = v;
+      }
+      for (size_t b = 0; b < total; b += 1600) {
+        uint32_t peak = 0;
+        const size_t end = std::min(b + size_t(1600), total);
+        for (size_t i = b; i < end; ++i) {
+          const uint32_t v = abs((int)wav[i]);
+          if (v > peak) peak = v;
+        }
+        reference.peaks[reference.count++] = peak;
+        if ((int)peak >= vad_threshold) ++reference.voiced;
+      }
+      const uint32_t cpp_elapsed = micros() - cpp_started;
+      const bool matches = memcmp(&profile, &reference, sizeof(profile)) == 0;
+      printf("[AUDIO CHECK] match=%s cpp_us=%u rust_us=%u\n",
+             matches ? "yes" : "NO", (unsigned)cpp_elapsed, (unsigned)elapsed);
+      if (!matches) profile = reference; // Keep the original decisions on mismatch.
+#endif
+      printf("[REC] total=%u pre=%u prePeak=%u livePeak=%u\n",
+             (unsigned)total, (unsigned)pre_n,
+             (unsigned)profile.pre_peak, (unsigned)profile.live_peak);
+      printf("[WAVPROF]");
+      for (uint32_t i = 0; i < profile.count; ++i)
+        printf(" %u", (unsigned)profile.peaks[i]);
+      printf("\n[RUST AUDIO] samples=%u analysis_us=%u\n",
+             (unsigned)total, (unsigned)elapsed);
+      g_voiced_100ms = profile.voiced;
+    } else
+#endif
+    {
     int prePeak = 0, livePeak = 0;
     for (size_t i = 0; i < total; i++) {
       int v = abs((int)wav[i]);
@@ -1727,6 +1773,7 @@ String SpeechToText(bool use_preroll = false) {
     }
     printf("\n");
     g_voiced_100ms = voiced;
+    }
   }
   printf("Record end. transcribing...\n");
   avatar.setExpression(Expression::Doubt);  // 認識中
@@ -2060,6 +2107,15 @@ void setup() {
   // ※ M5Unified 0.2.x 以降が必要
   cfg.external_speaker.atomic_echo = true;
   M5.begin(cfg);
+#ifdef STACKCHAN_RUST_AUDIO
+  const int16_t rust_test[] = {-32768, 123, -456};
+  StackchanAudioProfile rust_result{};
+  const bool rust_ok = stackchan_audio_profile(rust_test, 3, 1, 1000, &rust_result)
+      && rust_result.pre_peak == 32768 && rust_result.live_peak == 456
+      && rust_result.voiced == 1 && rust_result.count == 1
+      && rust_result.peaks[0] == 32768;
+  printf("[RUST AUDIO] boot self-test=%s\n", rust_ok ? "PASS" : "FAIL");
+#endif
 
   // TTS ストリーミングバッファは PSRAM (8MB) に確保
   preallocateBuffer = (uint8_t *)heap_caps_malloc(preallocateBufferSize,

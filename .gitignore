@@ -7,3 +7,7 @@ include/secrets.h
 tools/docs-figures/out/
 tools/docs-figures/venv/
 tools/docs-figures/artifact.html
+
+# Rust build artifacts
+rust/audio-core/target/
+.tools/

@@ -1,4 +1,50 @@
-# ちびスタックちゃん (Chibi StackChan)
+# ちびスタックちゃん Rust導入版 (Chibi StackChan Rust)
+
+[C++版の元リポジトリ](https://github.com/atatakeisi/chibi-stackchan)から派生した、
+**C++＋Rustの混在版**です。元のGit履歴とライセンスを引き継いでいます。
+全体をRustへ置き換えたものではありません。
+
+## Rustで変更した部分
+
+- 録音後の音声解析を、C++からRustの `no_std` ライブラリへ移しました。
+- プリロール／録音本体のピーク、100ms単位のピークと有声音の窓数を1回の走査で計算します。
+- マイク・スピーカー・サーボのドライバー、天気取得、Whisper／Claude／Gemini／VOICEVOXとの通信はC++です。
+- ATOMS3R＋Atomic Echo Baseで書き込み・起動・Rust自己テストを確認し、ユーザーが通常どおりの音声応答を確認しました。
+
+実音声124,000サンプルでC++版と結果が一致し、1回の計測はC++ **22.120ms**、Rust **18.563ms**でした。
+走査方法も変更しているため、言語だけによる差ではありません。会話全体の高速化を保証する測定ではありません。
+
+## Rust版のビルド
+
+PlatformIOと、ESP32-S3向けのEspressif Rustツールチェーン `esp` が必要です。
+通常のデスクトップ用Rustだけでは実機向けにビルドできません。
+[公式の導入手順](https://docs.espressif.com/projects/rust/book/getting-started/toolchain.html)を参照してください。
+このプロジェクトは `rustup run esp cargo` を使うため、既定のRustツールチェーンは切り替えません。
+
+`include/secrets.h` がまだ無い場合だけ、`include/secrets.h.example` をコピーして作成してください。
+本体の設定ポータルを使う場合、各設定値は空文字列で構いません。APIキーやWi-FiパスワードはGitへ登録しないでください。
+
+```sh
+cargo test --manifest-path rust/audio-core/Cargo.toml --offline
+pio run                          # Rust導入版（既定）
+pio run -t upload --upload-port PORT
+pio device monitor --port PORT --baud 115200
+```
+
+`PORT` は接続した実機のシリアルポートです。
+
+| PlatformIO環境 | 用途 |
+|---|---|
+| `atoms3r-rust` | 通常のRust導入版（既定） |
+| `atoms3r-rust-check` | C++／Rustの結果一致と処理時間を比較する検証版 |
+| `atoms3r` | 元のC++版 |
+
+検証版は `pio run -e atoms3r-rust-check`、C++版は `pio run -e atoms3r` でビルドできます。
+詳細な構成と確認結果は [RUST_INTEGRATION.md](RUST_INTEGRATION.md) にあります。
+以下は元プロジェクトの機能・配線・操作説明です。
+
+---
+
 
 **ATOMS3R AI Chatbotキット**（AtomS3R + Atomic Echo Base, 8MB PSRAM）で動く、
 手のひらサイズのAIスタックちゃん。[guruguru-stackchan](../guruguru-stackchan)（Core2版）からの派生です。
