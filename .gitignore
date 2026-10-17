@@ -10,4 +10,10 @@ tools/docs-figures/artifact.html
 
 # Rust build artifacts
 rust/audio-core/target/
+rust/avatar-face/target/
+rust/firmware/target/
+rust/firmware/.embuild/
+rust/firmware/sdkconfig
+rust/firmware/sdkconfig.old
+rust/firmware/sdkconfig.partition.defaults
 .tools/

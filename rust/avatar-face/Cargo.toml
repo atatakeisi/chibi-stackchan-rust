@@ -1,0 +1,8 @@
+[package]
+name = "stackchan-avatar-face"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Hardware-independent Rust rendering of the original M5Stack Avatar face"
+
+[dependencies]

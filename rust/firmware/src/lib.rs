@@ -1,0 +1,20 @@
+pub mod audio;
+pub mod config;
+pub mod conversation;
+pub mod playback;
+pub mod services;
+pub mod voice_action;
+pub mod voice_volume;
+pub mod web;
+
+#[cfg(target_os = "espidf")]
+pub mod board;
+#[cfg(target_os = "espidf")]
+pub mod device;
+#[cfg(target_os = "espidf")]
+pub mod diagnostics;
+#[cfg(target_os = "espidf")]
+pub mod display;
+pub mod network;
+#[cfg(target_os = "espidf")]
+pub mod storage;

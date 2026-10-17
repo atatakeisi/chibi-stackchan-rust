@@ -1,47 +1,67 @@
-# ちびスタックちゃん Rust導入版 (Chibi StackChan Rust)
+# ちびスタックちゃん Rustファームウェア (Chibi StackChan Rust)
 
-[C++版の元リポジトリ](https://github.com/atatakeisi/chibi-stackchan)から派生した、
-**C++＋Rustの混在版**です。元のGit履歴とライセンスを引き継いでいます。
-全体をRustへ置き換えたものではありません。
+[C++版の元リポジトリ](https://github.com/atatakeisi/chibi-stackchan)を基に、
+**アプリケーション全体を Rust で再構成したファームウェア**を [rust/firmware](rust/firmware/README.md) に追加しました。
+音声入出力、画面、サーボ、会話、ネットワーク、設定保存を独立した Cargo プロジェクトで構成しています。
 
-## Rustで変更した部分
+Arduino・M5Unified の C++ ランタイムを使わず、Rust の `esp-idf-svc` / HAL から
+ESP-IDF の C SDK を利用します。ESP-IDF を含むバイナリ全体が Rust だけになる構成ではありません。
 
-- 録音後の音声解析を、C++からRustの `no_std` ライブラリへ移しました。
-- プリロール／録音本体のピーク、100ms単位のピークと有声音の窓数を1回の走査で計算します。
-- マイク・スピーカー・サーボのドライバー、天気取得、Whisper／Claude／Gemini／VOICEVOXとの通信はC++です。
-- ATOMS3R＋Atomic Echo Baseで書き込み・起動・Rust自己テストを確認し、ユーザーが通常どおりの音声応答を確認しました。
+## Rustファームウェアのビルド
 
-実音声124,000サンプルでC++版と結果が一致し、1回の計測はC++ **22.120ms**、Rust **18.563ms**でした。
-走査方法も変更しているため、言語だけによる差ではありません。会話全体の高速化を保証する測定ではありません。
+Python 3、Cargo、ESP32-S3 向けの Espressif Rust ツールチェーン `esp` が必要です。
+この作業環境には `esp` が導入済みです。ビルドは `rustup run esp cargo` を明示的に呼び出します。
+シェルの環境変数や既定のツールチェーンを変更する操作は不要です。
 
-## Rust版のビルド
-
-PlatformIOと、ESP32-S3向けのEspressif Rustツールチェーン `esp` が必要です。
-通常のデスクトップ用Rustだけでは実機向けにビルドできません。
-[公式の導入手順](https://docs.espressif.com/projects/rust/book/getting-started/toolchain.html)を参照してください。
-このプロジェクトは `rustup run esp cargo` を使うため、既定のRustツールチェーンは切り替えません。
-
-`include/secrets.h` がまだ無い場合だけ、`include/secrets.h.example` をコピーして作成してください。
-本体の設定ポータルを使う場合、各設定値は空文字列で構いません。APIキーやWi-FiパスワードはGitへ登録しないでください。
+リポジトリのルートで実行します。
 
 ```sh
-cargo test --manifest-path rust/audio-core/Cargo.toml --offline
-pio run                          # Rust導入版（既定）
-pio run -t upload --upload-port PORT
-pio device monitor --port PORT --baud 115200
+cargo fetch --manifest-path rust/firmware/Cargo.toml
+python3 scripts/firmware.py tools   # ldproxy をプロジェクト内の .tools/ に導入
+python3 scripts/firmware.py test    # ホスト上の単体テスト
+python3 scripts/firmware.py build   # ESP32-S3 向け release ビルド
 ```
 
-`PORT` は接続した実機のシリアルポートです。
+生成される ELF は `rust/firmware/target/xtensa-esp32s3-espidf/release/stackchan-firmware`、
+アプリケーション用バイナリは同じ場所の `stackchan-firmware.bin` です。
+Rust 版は `include/secrets.h` を読み込まず、既存 NVS 設定の移行と Web 設定ポータルを使います。
+構成、操作、保存形式、ビルドの詳細は [Rustファームウェアの説明](rust/firmware/README.md) を参照してください。
 
-| PlatformIO環境 | 用途 |
+## 実装と検証の範囲
+
+- 録音・WAV・VAD、Gemini / Claude、Whisper、VOICEVOX、時刻・天気・タイマー・睡眠を Rust へ移しました。
+- 「スタックちゃん、音量を下げて」「音量を10にして」「ミュート解除」などを音声認識後に本体で処理し、音量を変更・保存する機能を実装しました。マイク入力ではミュート・解除は動いた一方、数値指定・音量アップが通常会話へ流れたとの報告があり、解析と AI からの操作指示を修正し、実際の声で下げる・上げる操作を確認しました。数値 20 が「二重」になる認識違いも補正しました。[音声で音量を変える](rust/firmware/README.md#音声で音量を変える) に操作例をまとめています。
+- LCD 2 種の判定、Atomic Echo Base の音声入出力、首振りサーボを Rust のドライバーで構成しました。
+- 元の M5Stack-Avatar の白い丸目・四角い口・6 表情を [独立した顔描画ライブラリ](rust/avatar-face/README.md) へ移植しました。元の縮尺・配置で描画し、まばたき・視線・呼吸・口パク・傾きを制御します。[表情プレビュー](docs/images/rust-avatar-face-preview.png) で形を確認できます。
+- Wi-Fi / 設定 AP / キャプティブ DNS / Web UI / NVS 移行 / SPIFFS ロール・音声読込を実装しました。
+- **顔描画ライブラリのホストテスト 12 件、Rust ファームウェアの 86 件、既存音声解析ライブラリの 2 件、ESP32-S3 向け release ビルドが成功しました。**
+- **接続した ATOMS3R の app0（`0x10000`）へ Rust 版を書き込み、書き込みハッシュを検証しました。**
+- 元の Avatar を基にした顔描画修正版も実機へ書き込み、再生・マイク復帰・待機・Web 画面の応答を再確認しました。ユーザーが実機で「元の顔に戻った」と確認しました。
+- 顔描画後に声がかすれる問題は、描画範囲の最適化と SPI 転送設定の修正で改善しました。実機で音声長 4,848 ms に対して再生処理 4,821 ms を確認し、ユーザーが「自然な声に戻った」と確認しました。保存音量 **10 / 255** と話者 **54** は保持しています。
+- 実機で既存 Wi-Fi 設定の引き継ぎ・DHCP、ST7735S LCD の識別、VOICEVOX の HTTPS 音声取得と MP3 再生完了、マイク復帰・待機状態、Web の `/`・`/config`・`/role` の HTTP 200 を確認しました。
+- ユーザーが音声出力とミュート時の無音を確認しました。過大音量の原因だったコーデックの +32 dB 設定を 0 dB に修正し、同じ音声の再生中に音量変更・ミュートが反映されることを実機ログで確認しました。音量修正後にユーザーが許容範囲と確認しました。前回の検証終了時は音量 **15 / 255**・話者 **54** でした。今回の書き込み前はユーザー設定の音量 **17 / 255** を引き継ぎ、検証後も17へ戻しています。
+- 実機の文字入力から音声認識後と同じ処理へ「スタックちゃん音量下げて」「おーい、ミュートして」を渡し、保存値・再生音量・出力 PCM への反映を確認しました。同じ音声の出力 PCM は音量 15 で音量 5 のちょうど 3 倍となりました。初期版で取りこぼした音声命令は修正済みです。ユーザーが実際の声でミュート・解除、音量30・20・5への変更を確認し、5が小さな音量になることも確認しました。
+- **2026-10-17：iPhone の Web 画面から設定変更・本体操作ができることをユーザーが確認しました。** この状態の Rust ソースとビルド設定を本プロジェクトに保存しています。書き込み済みバイナリの識別情報は [実機確認記録](rust/firmware/README.md#書き込みと確認状況) を参照してください。
+- ユーザーが実機へ「スタックちゃんタイマー1分」と話して設定し、1 分後の音声による通知まで確認しました。前回の呼びかけ修正版でも同じ文を文字入力して、通知音声の再生完了とマイク復帰を確認しました。通常の会話応答、設定地点の天気、iPhone操作もユーザーが確認しました。サーボの実動作は未確認です。
+
+書き込み前にフラッシュ全体 8 MiB を非公開の `.tools/backups/` 以下へバックアップし、実機の 6 パーティションと構成の一致を確認しました。
+既存のブートローダー・パーティションテーブル・NVS・SPIFFS は保持しています。
+上記のテスト・ビルドコマンドは実機への書き込みを行いません。
+
+## 既存の PlatformIO 版
+
+`src/` と PlatformIO の構成は参照・比較用として残しています。
+`pio run` は従来どおり **Arduino C++＋Rust 音声解析ライブラリの混在版**をビルドします。
+
+| PlatformIO 環境 | 用途 |
 |---|---|
-| `atoms3r-rust` | 通常のRust導入版（既定） |
-| `atoms3r-rust-check` | C++／Rustの結果一致と処理時間を比較する検証版 |
-| `atoms3r` | 元のC++版 |
+| `atoms3r-rust` | 既存の C++＋Rust 混在版（PlatformIO の既定） |
+| `atoms3r-rust-check` | 既存の C++ / Rust 音声解析比較版 |
+| `atoms3r` | 元の C++ 版 |
 
-検証版は `pio run -e atoms3r-rust-check`、C++版は `pio run -e atoms3r` でビルドできます。
-詳細な構成と確認結果は [RUST_INTEGRATION.md](RUST_INTEGRATION.md) にあります。
-以下は元プロジェクトの機能・配線・操作説明です。
+混在版の実機確認・音声解析測定は [RUST_INTEGRATION.md](RUST_INTEGRATION.md) に記録しています。
+その測定値・実機確認は、新しい Rust ファームウェアには適用されません。
+以下は保存している元プロジェクトの機能・配線・操作説明です。Arduino / PlatformIO 固有の手順を含みます。
 
 ---
 
