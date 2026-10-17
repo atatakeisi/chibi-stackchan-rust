@@ -1,0 +1,11 @@
+{
+    "rust-analyzer.linkedProjects": [
+        "rust/firmware/Cargo.toml",
+        "rust/avatar-face/Cargo.toml"
+    ],
+    "files.exclude": {
+        "**/target": true,
+        "**/.embuild": true,
+        ".tools": true
+    }
+}

@@ -1,5 +1,8 @@
 .pio/
-.vscode/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
 include/secrets.h
 .DS_Store
 
@@ -9,7 +12,6 @@ tools/docs-figures/venv/
 tools/docs-figures/artifact.html
 
 # Rust build artifacts
-rust/audio-core/target/
 rust/avatar-face/target/
 rust/firmware/target/
 rust/firmware/.embuild/
@@ -17,3 +19,7 @@ rust/firmware/sdkconfig
 rust/firmware/sdkconfig.old
 rust/firmware/sdkconfig.partition.defaults
 .tools/
+
+# Python caches from documentation tooling
+__pycache__/
+*.py[cod]

@@ -1,4 +1,9 @@
-"""本体 LCD (128x128) の再現図。src/main.cpp の描画コードと座標を 1:1 で対応させる。
+"""元の C++ 版マニュアル用の本体 LCD (128x128) 再現図。
+
+整理前の描画座標を記録した履歴図で、現在の Rust ソースは読み取らない。
+参照元:
+https://github.com/atatakeisi/chibi-stackchan-rust/blob/ffb5c74706a106e09211d558a028f2fccbaac537/src/main.cpp
+現在の顔描画については rust/avatar-face/README.md を参照する。
 
 - setTextSize(1) = 6x8px セル / setTextSize(2) = 12x16px セル
 - 文字は 1 文字ずつセル中央に描いてレイアウトを実機と一致させる

@@ -4,9 +4,30 @@ The full Rust application firmware is documented in
 [rust/firmware/README.md](rust/firmware/README.md). Build it with
 `python3 scripts/firmware.py build` from the repository root.
 
-This document records the earlier Arduino C++ / Rust audio-library integration.
-Its recorded uploads, measurements, and hardware observations apply only to
-that mixed firmware. The new Rust application has passed 86 firmware host tests,
+## Legacy source checkpoint and completed cleanup
+
+The C++ and mixed C++/Rust sources are preserved in the immutable
+[pre-cleanup checkpoint `ffb5c747`](https://github.com/atatakeisi/chibi-stackchan-rust/tree/ffb5c74706a106e09211d558a028f2fccbaac537).
+The original C++ project is independently preserved at
+[`atatakeisi/chibi-stackchan`, commit `10460b3`](https://github.com/atatakeisi/chibi-stackchan/tree/10460b3bdd97fd59e05dcc9f69395839ea51a8fb).
+
+After explicit user approval, the old root `src/`, PlatformIO configuration, and
+`rust/audio-core/` were removed from the active Rust project. Their source,
+build instructions, licenses, and measurements remain available at the checkpoint;
+this document retains the historical results below. Commands mentioning
+`rust/audio-core`, `include/secrets.h`, `atoms3r`, or `pio` describe that checkpoint,
+and are not build instructions for the Rust-only application after cleanup.
+
+The active local crates are `rust/firmware` and its face-rendering dependency
+`rust/avatar-face`. See [the migration map](docs/RUST_MIGRATION.md) for the
+C++-to-Rust module correspondence and the scope of the cleanup.
+
+## Rust application validation record
+
+The later sections retain the earlier Arduino C++ / Rust audio-library uploads,
+measurements, and hardware observations; those results apply only to the mixed
+firmware. The following record describes the full Rust application separately.
+The new Rust application has passed 86 firmware host tests,
 12 independent Avatar face-library tests, and an
 ESP32-S3 release build, and has been flashed to app0 at `0x10000` with the write
 hash verified. A private full-flash backup was made first; the existing bootloader,
@@ -92,17 +113,22 @@ spoken alarm after one minute, before the current volume-command fix. The previo
 firmware also accepted that exact text through `/chat` and, after approximately
 one minute, completed its spoken alarm (46,848 frames at volume 15) and restored
 the microphone. That test ended at volume 15. The latest numeric-homophone test
-restored saved/live volume 17 / 255 with speaker 54 unchanged. The user subsequently confirmed mute/unmute, numeric volumes30/20/5 (with5quiet),
-normal conversation, weather for the configured location, and iPhone control.
+restored saved/live volume 17 / 255 with speaker 54 unchanged. The user subsequently
+confirmed mute and unmute, numeric volumes 30, 20, and 5, normal conversational
+responses, weather for the configured location, and iPhone control. Volume 5 was
+confirmed to be very quiet and acceptable; earlier restored test values do not
+describe a fixed or enforced volume.
 Physical servo movement remains unverified.
 See the full Rust firmware README for its
 current validation status; the historical measurements below remain separate.
 
-The original `atoms3r` environment remains available. The PlatformIO default `atoms3r-rust`
-environment links a no_std Rust static library into the Arduino firmware.
-Hardware drivers, Wi-Fi, credentials, and AI service clients remain in C++.
+At the historical checkpoint, `atoms3r` contains the original C++ build and the
+PlatformIO default `atoms3r-rust` links a no_std Rust static library into the
+Arduino firmware. In that mixed build, hardware drivers, Wi-Fi, credentials,
+and AI service clients are C++. Those environments belong to the checkpoint,
+not the active Rust application described above.
 
-## Scope
+## Historical mixed-firmware scope
 
 Recorded 16 kHz mono PCM is analyzed once to compute preroll/live peaks,
 100 ms window peaks, and the voiced-window count. The original code scans it
@@ -117,7 +143,7 @@ not controlled benchmarks (cache/task scheduling can affect results).
 A mismatch uses the C++ result. Invalid Rust input falls back to original C++.
 `[RUST AUDIO]` confirms that the Rust call ran successfully.
 
-## Host verification
+## Historical host verification (checkpoint checkout only)
 
 ```
 cargo test --manifest-path rust/audio-core/Cargo.toml --offline
@@ -128,7 +154,7 @@ boundaries, thresholds, empty input and full 12-second input. Additional tests
 cover -32768, silence and FFI argument rejection. The C ABI requires a valid,
 aligned, nonoverlapping buffer that is no longer being recorded into.
 
-## Device prerequisites and build
+## Historical device prerequisites and build (checkpoint checkout only)
 
 ESP32-S3 requires the Espressif Xtensa Rust toolchain named `esp`, with Rust
 sources. Standard desktop stable Rust is insufficient. Install via espup
@@ -161,7 +187,7 @@ have not been performed until explicitly recorded. Original C++ build:
 pio run -e atoms3r
 ```
 
-## Device validation recorded
+## Historical device validation recorded
 
 - Desktop Rust tests passed (2 tests, including differential boundary cases).
 - Original C++ and Rust-enabled firmware builds passed.
