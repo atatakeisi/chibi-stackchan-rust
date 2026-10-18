@@ -45,6 +45,7 @@ pub fn status_json(state: &WebState, volume: &crate::playback::VolumeControl) ->
         "live_volume": live.volume,
         "last_nonzero_volume": live.last_nonzero_volume,
         "last_playback": state.last_playback,
+        "orientation": crate::orientation_status::snapshot(),
     })
     .to_string()
 }
@@ -701,7 +702,16 @@ mod tests {
         assert_eq!(value["saved_volume"], 5);
         assert_eq!(value["live_volume"], 15);
         assert_eq!(value["last_playback"]["volume_min"], 15);
-        assert_eq!(value.as_object().unwrap().len(), 4);
+        let orientation = value["orientation"].as_object().unwrap();
+        assert_eq!(orientation.len(), 7);
+        assert!(orientation["rotation"].as_u64().unwrap() < 4);
+        assert!(orientation["sample_count"].is_u64());
+        assert!(orientation["imu_enabled"].is_boolean());
+        assert!(orientation["reset_reason"].is_u64());
+        assert!(orientation["uptime_ms"].is_u64());
+        assert!(orientation.contains_key("accel_mg"));
+        assert!(orientation.contains_key("last_sample_ms"));
+        assert_eq!(value.as_object().unwrap().len(), 5);
         assert!(!json.contains("private"));
     }
 

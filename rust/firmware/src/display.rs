@@ -121,6 +121,8 @@ pub struct Display {
     _reset: PinDriver<'static, Output>,
     panel: Panel,
     frame: Vec<u8>,
+    rotated_frame: Vec<u8>,
+    rotation: u8,
     last_draw: Option<(u64, Expression, FaceState)>,
     animator: stackchan_avatar_face::animation::Animator,
     timing: FrameTiming,
@@ -182,6 +184,8 @@ impl Display {
             _reset: reset,
             panel,
             frame: vec![0; WIDTH * HEIGHT * 2],
+            rotated_frame: vec![0; WIDTH * HEIGHT * 2],
+            rotation: 0,
             last_draw: None,
             animator: stackchan_avatar_face::animation::Animator::new(unsafe { sys::esp_random() }),
             timing: FrameTiming::default(),
@@ -244,6 +248,14 @@ impl Display {
     }
 
     fn flush(&mut self) -> Result<()> {
+        if self.rotation != 0 {
+            crate::orientation::rotate_frame(
+                &self.frame,
+                &mut self.rotated_frame,
+                WIDTH,
+                self.rotation,
+            );
+        }
         let (x, y) = self.panel.offset();
         self.command(0x2a, &[0, x as u8, 0, (x + 127) as u8])?;
         self.command(0x2b, &[0, y as u8, 0, (y + 127) as u8])?;
@@ -252,13 +264,29 @@ impl Display {
             self.dc.set_low()?;
             self.bus.write(&[0x2c])?;
             self.dc.set_high()?;
-            self.bus.write(&self.frame)?;
+            self.bus.write(if self.rotation == 0 {
+                &self.frame
+            } else {
+                &self.rotated_frame
+            })?;
             Ok(())
         })();
         let release = self.cs.set_high();
         result?;
         release?;
         Ok(())
+    }
+
+    pub fn set_rotation(&mut self, rotation: u8) {
+        if self.rotation != rotation {
+            self.rotation = rotation;
+            self.last_draw = None;
+        }
+    }
+
+    /// Refresh static setup text after rotation; animated faces flush in draw.
+    pub fn refresh(&mut self) -> Result<()> {
+        self.flush()
     }
 
     pub fn draw(

@@ -1,6 +1,8 @@
 pub mod audio;
 pub mod config;
 pub mod conversation;
+pub mod orientation;
+pub mod orientation_status;
 pub mod playback;
 pub mod services;
 pub mod voice_action;
@@ -15,6 +17,8 @@ pub mod device;
 pub mod diagnostics;
 #[cfg(target_os = "espidf")]
 pub mod display;
+#[cfg(target_os = "espidf")]
+pub mod imu;
 pub mod network;
 #[cfg(target_os = "espidf")]
 pub mod storage;

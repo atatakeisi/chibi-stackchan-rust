@@ -44,6 +44,8 @@ pub struct Board {
     pub expression: Expression,
     pub state: FaceState,
     bus: I2cDriver<'static>,
+    internal_bus: I2cDriver<'static>,
+    imu: Option<crate::imu::Imu>,
     i2s: I2sDriver<'static, I2sBiDir>,
     button: PinDriver<'static, Input>,
     servo: Servo,
@@ -70,6 +72,10 @@ impl Board {
         p: Peripherals,
         volume: crate::playback::VolumeControl,
     ) -> Result<(Self, Modem<'static>)> {
+        crate::orientation_status::initialize(
+            unsafe { sys::esp_reset_reason() } as u32,
+            (unsafe { sys::esp_timer_get_time() } / 1_000) as u64,
+        );
         let mut internal = I2cDriver::new(
             p.i2c0,
             p.pins.gpio45,
@@ -86,6 +92,13 @@ impl Board {
             &mut internal,
         )?;
         display.show_status(&["CHIBI STACKCHAN", "Rust firmware", "Starting..."])?;
+        let imu = match crate::imu::Imu::new(&mut internal) {
+            Ok(imu) => Some(imu),
+            Err(error) => {
+                log::warn!("Face auto-rotation unavailable; fixed orientation: {error:#}");
+                None
+            }
+        };
         let bus = I2cDriver::new(
             p.i2c1,
             p.pins.gpio38,
@@ -125,6 +138,8 @@ impl Board {
         let mut board = Self {
             display,
             bus,
+            internal_bus: internal,
+            imu,
             i2s,
             button,
             servo,
@@ -172,6 +187,15 @@ impl Board {
 
     pub fn tick(&mut self, _now_ms: u64) -> Result<()> {
         let now = self.now_ms();
+        if let Some(imu) = &mut self.imu {
+            if let Some(rotation) = imu.poll(&mut self.internal_bus, now) {
+                self.display.set_rotation(rotation);
+                crate::orientation_status::set_rotation(rotation);
+                if self.state == FaceState::Setup {
+                    self.display.refresh()?;
+                }
+            }
+        }
         self.servo.update(
             now,
             self.state == FaceState::Speaking,
